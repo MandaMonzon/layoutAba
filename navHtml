@@ -2,34 +2,72 @@
 #include <list>
 #include <string>
 #include <iostream>
+#include <fstream>
+
+class HtmlLoader {
+public:
+    // Construtor que carrega o conteúdo do arquivo HTML
+    HtmlLoader(const std::string& filePath) {
+        std::ifstream file(filePath); // Abre o arquivo
+        if (file.is_open()) {
+            std::string line;
+            while (std::getline(file, line)) {
+                content += line + "\n"; // Lê o conteúdo do arquivo linha por linha
+            }
+            file.close();
+        } else {
+            std::cerr << "Erro ao abrir o arquivo: " << filePath << std::endl;
+        }
+    }
+
+    const std::string& getContent() const {
+        return content;
+    }
+
+private:
+    std::string content;
+};
 
 class Tab {
 public:
     Tab(const std::string& title, sf::Font& font) : title(title), font(font) {
         // Um retângulo simples para representar o conteúdo de uma aba
-        content.setSize(sf::Vector2f(600, 400));
-        content.setFillColor(sf::Color::White);
-        content.setPosition(100, 150);
+        contentShape.setSize(sf::Vector2f(600, 400));
+        contentShape.setFillColor(sf::Color::White);
+        contentShape.setPosition(100, 150);
 
         // Configuração do título da aba
         text.setFont(font);
         text.setString(title);
         text.setCharacterSize(24);
         text.setFillColor(sf::Color::Black);
-        text.setPosition(content.getPosition().x + 10, content.getPosition().y + 10);
+        text.setPosition(contentShape.getPosition().x + 10, contentShape.getPosition().y + 10);
+
+        // Inicializa a caixa de texto
+        contentText.setFont(font);
+        contentText.setCharacterSize(18);
+        contentText.setFillColor(sf::Color::Black);
+        contentText.setPosition(contentShape.getPosition().x + 10, contentShape.getPosition().y + 50);
     }
 
     void draw(sf::RenderWindow& window) {
-        window.draw(content);
+        window.draw(contentShape);
         window.draw(text);
+        window.draw(contentText);  // Desenha o texto do conteúdo HTML
+    }
+
+    void setContent(const std::string& newContent) {
+        content = newContent; // Atualiza o conteúdo da aba
+        contentText.setString(content);  // Atualiza o conteúdo na aba
     }
 
 private:
-    sf::RectangleShape content;
-    sf::Text text;
+    sf::RectangleShape contentShape; // Caixa de conteúdo da aba
+    sf::Text text;                   // Título da aba
+    sf::Text contentText;            // Texto do conteúdo da aba
     sf::Font& font;
     std::string title;
-
+    std::string content;             // Conteúdo carregado do HTML
 };
 
 class BrowserWindow {
@@ -63,6 +101,12 @@ public:
         }
     }
 
+    // Adiciona uma nova aba com o conteúdo fornecido
+    void addTabFromLoader(const std::string& content) {
+        addTab("Nova Aba");  // Cria uma nova aba com o título "Nova Aba"
+        selectedTab->setContent(content);  // Define o conteúdo da aba com o texto carregado
+    }
+
 private:
     sf::RenderWindow window;
     std::list<Tab> tabs;
@@ -76,8 +120,8 @@ private:
     float tabWidth;
 
     void addTab(const std::string& title) {
-        Tab newTab(title, font);  // Construímos o objeto `Tab`
-        tabs.push_back(newTab);   // Adicionamos o objeto `Tab` na lista
+        Tab newTab(title, font);  // Criamos um novo objeto `Tab`
+        tabs.push_back(newTab);   // Adicionamos o novo objeto `Tab` à lista
         if (tabs.size() == 1) {
             selectedTab = tabs.begin();  // Seleciona a aba recém-criada se for a única
         }
@@ -97,7 +141,6 @@ private:
 
                     // Verificar se o clique está dentro dos limites da janela
                     if (window.getViewport(window.getView()).contains(event.mouseButton.x, event.mouseButton.y)) {
-
                         // Verificar se o botão "Nova Aba" foi clicado
                         if (newTabButton.getGlobalBounds().contains(mousePos)) {
                             addTab("Nova Aba " + std::to_string(tabs.size() + 1));
@@ -170,7 +213,13 @@ private:
 };
 
 int main() {
+    // Carregar o conteúdo do arquivo HTML
+    HtmlLoader loader("Index.html"); // Nome do arquivo HTML
+    std::cout << "Conteúdo do arquivo:" << std::endl;
+    std::cout << loader.getContent() << std::endl; // Exibe o conteúdo do arquivo
+
+    // Criar a janela do navegador e adicionar a aba com o conteúdo carregado
     BrowserWindow browser;
-    browser.run();
-    return 0;
+    browser.addTabFromLoader(loader.getContent()); // Adiciona a aba com o conteúdo do arquivo
+    browser.run(); // Executa o navegador
 }
